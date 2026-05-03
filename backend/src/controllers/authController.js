@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 const ApiError = require("../utils/ApiError");
+const { ADMIN_EMAIL_SUFFIX, canBecomeAdmin } = require("../utils/adminEligibility");
 
 const buildAuthResponse = (user) => ({
   token: generateToken(user._id),
@@ -17,6 +18,10 @@ const signup = async (req, res) => {
   const existingUser = await User.findOne({ email: email.toLowerCase() });
   if (existingUser) {
     throw new ApiError(409, "A user with this email already exists.");
+  }
+
+  if (role === "admin" && !canBecomeAdmin(email)) {
+    throw new ApiError(403, `Only users whose email ends with ${ADMIN_EMAIL_SUFFIX} can become admin.`);
   }
 
   const user = await User.create({

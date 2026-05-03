@@ -5,7 +5,8 @@ import { useAuth } from "../context/AuthContext";
 const navItems = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/projects", label: "Projects" },
-  { to: "/tasks", label: "Tasks" }
+  { to: "/tasks", label: "Tasks" },
+  { to: "/users", label: "Users", adminOnly: true }
 ];
 
 const AppLayout = () => {
@@ -27,7 +28,7 @@ const AppLayout = () => {
 
           <div className="flex flex-col gap-4 lg:items-end">
             <nav className="flex flex-wrap gap-2">
-              {navItems.map((item) => (
+              {navItems.filter((item) => !item.adminOnly || user?.role === "admin").map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
