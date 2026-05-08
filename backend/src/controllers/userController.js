@@ -2,11 +2,11 @@ const User = require("../models/User");
 const Project = require("../models/Project");
 const Task = require("../models/Task");
 const ApiError = require("../utils/ApiError");
-const { ADMIN_EMAIL_SUFFIX, canBecomeAdmin } = require("../utils/adminEligibility");
+const { assertAdminKey } = require("../utils/adminEligibility");
 
-const validateAdminEligibility = (email, role) => {
-  if (role === "admin" && !canBecomeAdmin(email)) {
-    throw new ApiError(403, `Only users whose email ends with ${ADMIN_EMAIL_SUFFIX} can become admin.`);
+const assertAdminKeyForPromotion = ({ role, adminKey, currentRole = "member" }) => {
+  if (role === "admin" && currentRole !== "admin") {
+    assertAdminKey(adminKey);
   }
 };
 
@@ -16,7 +16,7 @@ const getUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const { name, email, password, role = "member" } = req.body;
+  const { name, email, password, role = "member", adminKey } = req.body;
 
   if (!name || !email || !password) {
     throw new ApiError(400, "Name, email, and password are required.");
@@ -26,7 +26,7 @@ const createUser = async (req, res) => {
     throw new ApiError(400, "Role must be admin or member.");
   }
 
-  validateAdminEligibility(email, role);
+  assertAdminKeyForPromotion({ role, adminKey });
 
   const existingUser = await User.findOne({ email: email.toLowerCase() });
   if (existingUser) {
@@ -54,7 +54,7 @@ const getUserById = async (req, res) => {
 };
 
 const updateUserRole = async (req, res) => {
-  const { role } = req.body;
+  const { role, adminKey } = req.body;
 
   if (!["admin", "member"].includes(role)) {
     throw new ApiError(400, "Role must be admin or member.");
@@ -66,7 +66,7 @@ const updateUserRole = async (req, res) => {
     throw new ApiError(404, "User not found.");
   }
 
-  validateAdminEligibility(user.email, role);
+  assertAdminKeyForPromotion({ role, adminKey, currentRole: user.role });
 
   user.role = role;
   await user.save();
@@ -75,7 +75,7 @@ const updateUserRole = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, adminKey } = req.body;
   const user = await User.findById(req.params.id);
 
   if (!user) {
@@ -86,9 +86,7 @@ const updateUser = async (req, res) => {
     throw new ApiError(400, "Role must be admin or member.");
   }
 
-  const nextEmail = email === undefined ? user.email : email;
-  const nextRole = role === undefined ? user.role : role;
-  validateAdminEligibility(nextEmail, nextRole);
+  assertAdminKeyForPromotion({ role, adminKey, currentRole: user.role });
 
   if (email !== undefined && email.toLowerCase() !== user.email) {
     const existingUser = await User.findOne({ email: email.toLowerCase(), _id: { $ne: user._id } });

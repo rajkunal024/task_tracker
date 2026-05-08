@@ -15,9 +15,14 @@ const LandingPage = () => {
         <Link to="/" className="text-xl font-extrabold tracking-tight text-white">
           Team Task Manager
         </Link>
-        <Link to="/login" className="btn-primary">
-          Login
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/login" className="btn-secondary">
+            User Login
+          </Link>
+          <Link to="/admin-login" className="btn-primary">
+            Admin Login
+          </Link>
+        </div>
       </header>
 
       <main className="mx-auto grid max-w-7xl gap-8 px-4 pb-12 pt-8 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pb-20 lg:pt-16">
@@ -34,7 +39,10 @@ const LandingPage = () => {
               Create Account
             </Link>
             <Link to="/login" className="btn-secondary">
-              Sign In
+              User Sign In
+            </Link>
+            <Link to="/admin-login" className="btn-secondary">
+              Admin Sign In
             </Link>
           </div>
         </section>
@@ -45,7 +53,7 @@ const LandingPage = () => {
               ["Projects", "Create workspaces, add descriptions, and assign members."],
               ["Tasks", "Set priority, due dates, assignees, and progress status."],
               ["Roles", "Admins manage users and work. Members focus on assigned tasks."],
-              ["Admin Domain", "Only users with an @raj.com email can become admins."]
+              ["Admin Access", "Users can become admins only after entering the correct admin key."]
             ].map(([title, description]) => (
               <article key={title} className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
                 <h2 className="text-lg font-bold text-white">{title}</h2>

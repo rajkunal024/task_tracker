@@ -9,10 +9,9 @@ const initialForm = {
   name: "",
   email: "",
   password: "",
-  role: "member"
+  role: "member",
+  adminKey: ""
 };
-
-const canBecomeAdmin = (email = "") => email.trim().toLowerCase().endsWith("@raj.com");
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -22,8 +21,6 @@ const UsersPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  const adminAllowed = canBecomeAdmin(form.email);
 
   const loadUsers = async () => {
     try {
@@ -49,13 +46,7 @@ const UsersPage = () => {
     const { name, value } = event.target;
 
     setForm((current) => {
-      const nextForm = { ...current, [name]: value };
-
-      if (name === "email" && nextForm.role === "admin" && !canBecomeAdmin(value)) {
-        nextForm.role = "member";
-      }
-
-      return nextForm;
+      return { ...current, [name]: value };
     });
   };
 
@@ -65,7 +56,8 @@ const UsersPage = () => {
       name: user.name,
       email: user.email,
       password: "",
-      role: user.role
+      role: user.role,
+      adminKey: ""
     });
   };
 
@@ -82,8 +74,8 @@ const UsersPage = () => {
       return;
     }
 
-    if (form.role === "admin" && !adminAllowed) {
-      setError("Only users whose email ends with @raj.com can become admin.");
+    if (form.role === "admin" && !form.adminKey.trim()) {
+      setError("Admin key is required to make this user an admin.");
       return;
     }
 
@@ -95,6 +87,10 @@ const UsersPage = () => {
 
     if (form.password.trim()) {
       payload.password = form.password;
+    }
+
+    if (form.role === "admin" && form.adminKey.trim()) {
+      payload.adminKey = form.adminKey;
     }
 
     setSaving(true);
@@ -170,10 +166,15 @@ const UsersPage = () => {
             <label className="label" htmlFor="role">Role</label>
             <select id="role" name="role" className="input" value={form.role} onChange={handleChange}>
               <option value="member">Member</option>
-              <option value="admin" disabled={!adminAllowed}>Admin</option>
+              <option value="admin">Admin</option>
             </select>
-            {!adminAllowed && <p className="mt-2 text-xs text-slate-500">Admin requires an email ending with @raj.com.</p>}
           </div>
+          {form.role === "admin" && (
+            <div>
+              <label className="label" htmlFor="adminKey">Admin Key</label>
+              <input id="adminKey" name="adminKey" type="password" className="input" value={form.adminKey} onChange={handleChange} />
+            </div>
+          )}
           <div className="flex gap-3">
             <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Saving..." : editingId ? "Update User" : "Create User"}</button>
             {editingId && <button type="button" className="btn-secondary" onClick={resetForm}>Cancel</button>}

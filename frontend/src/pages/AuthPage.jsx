@@ -9,23 +9,28 @@ const initialValues = {
   name: "",
   email: "",
   password: "",
-  role: "member"
+  role: "member",
+  adminKey: ""
 };
-
-const canBecomeAdmin = (email = "") => email.trim().toLowerCase().endsWith("@raj.com");
 
 const AuthPage = ({ mode = "login" }) => {
   const isSignup = mode === "signup";
+  const isAdminLogin = mode === "admin-login";
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, signup, isAuthenticated } = useAuth();
+  const { login, adminLogin, signup, isAuthenticated } = useAuth();
   const [values, setValues] = useState(initialValues);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const title = useMemo(() => (isSignup ? "Create your workspace account" : "Welcome back"), [isSignup]);
-  const adminAllowed = canBecomeAdmin(values.email);
+  const title = useMemo(() => {
+    if (isSignup) {
+      return "Create your workspace account";
+    }
+
+    return isAdminLogin ? "Admin sign in" : "User sign in";
+  }, [isSignup, isAdminLogin]);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -39,10 +44,6 @@ const AuthPage = ({ mode = "login" }) => {
         ...current,
         [name]: value
       };
-
-      if (name === "email" && nextValues.role === "admin" && !canBecomeAdmin(value)) {
-        nextValues.role = "member";
-      }
 
       return nextValues;
     });
@@ -61,8 +62,8 @@ const AuthPage = ({ mode = "login" }) => {
       return "Password must be at least 6 characters.";
     }
 
-    if (isSignup && values.role === "admin" && !adminAllowed) {
-      return "Only users whose email ends with @raj.com can become admin.";
+    if (isSignup && values.role === "admin" && !values.adminKey.trim()) {
+      return "Admin key is required to create an admin account.";
     }
 
     return "";
@@ -83,6 +84,8 @@ const AuthPage = ({ mode = "login" }) => {
     try {
       if (isSignup) {
         await signup(values);
+      } else if (isAdminLogin) {
+        await adminLogin({ email: values.email, password: values.password });
       } else {
         await login({ email: values.email, password: values.password });
       }
@@ -111,8 +114,11 @@ const AuthPage = ({ mode = "login" }) => {
         </nav>
 
         <div className="flex items-center gap-3 text-sm font-semibold">
-          <Link to="/login" className={isSignup ? "text-slate-200 transition hover:text-white" : "text-white"}>
-            Sign in
+          <Link to="/login" className={!isSignup && !isAdminLogin ? "text-white" : "text-slate-200 transition hover:text-white"}>
+            User login
+          </Link>
+          <Link to="/admin-login" className={isAdminLogin ? "text-white" : "text-slate-200 transition hover:text-white"}>
+            Admin login
           </Link>
           <Link
             to="/signup"
@@ -131,15 +137,17 @@ const AuthPage = ({ mode = "login" }) => {
 
       <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 pb-16 pt-20 text-center sm:px-6 lg:px-8 lg:pt-32">
         <p className="text-sm font-semibold uppercase tracking-[0.35em] text-violet-200">
-          {isSignup ? "Start managing work" : "Welcome back"}
+          {isSignup ? "Start managing work" : isAdminLogin ? "Admin access" : "Member access"}
         </p>
         <h1 className="mt-6 max-w-4xl text-5xl font-extrabold leading-[1.05] tracking-normal text-white sm:text-6xl lg:text-7xl">
-          {isSignup ? "Build better teamwork, together" : "Continue where your team left off"}
+          {isSignup ? "Build better teamwork, together" : isAdminLogin ? "Manage your team workspace" : "Continue where your team left off"}
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
           {isSignup
             ? "Create your workspace account, organize projects, assign tasks, and keep deadlines visible across the team."
-            : "Sign in to review project progress, update task status, and manage team ownership from one dashboard."}
+            : isAdminLogin
+              ? "Sign in as an admin to manage users, projects, task assignments, and workspace ownership."
+              : "Sign in as a member to review project progress, update task status, and track your assigned work."}
         </p>
 
         <form className="mt-10 w-full max-w-3xl space-y-4" onSubmit={handleSubmit}>
@@ -187,7 +195,7 @@ const AuthPage = ({ mode = "login" }) => {
               className="h-16 rounded-xl bg-emerald-600 px-8 text-base font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={submitting}
             >
-              {submitting ? <Loader label={isSignup ? "Creating" : "Signing in"} /> : isSignup ? "Sign up" : "Sign in"}
+              {submitting ? <Loader label={isSignup ? "Creating" : "Signing in"} /> : isSignup ? "Sign up" : isAdminLogin ? "Admin sign in" : "User sign in"}
             </button>
           </div>
 
@@ -200,17 +208,25 @@ const AuthPage = ({ mode = "login" }) => {
                 value={values.role}
                 onChange={handleChange}
               >
-                <option className="text-slate-950" value="member">Member</option>
-                <option className="text-slate-950" value="admin" disabled={!adminAllowed}>Admin</option>
-              </select>
+                  <option className="text-slate-950" value="member">Member</option>
+                  <option className="text-slate-950" value="admin">Admin</option>
+                </select>
               <Link to="/login" className="inline-flex h-14 items-center justify-center rounded-xl border border-white/75 px-5 text-sm font-bold text-white transition hover:bg-white/10">
                 I have an account
               </Link>
             </div>
           )}
 
-          {isSignup && !adminAllowed && (
-            <p className="text-sm text-slate-300">Admin requires an email ending with @raj.com.</p>
+          {isSignup && values.role === "admin" && (
+            <input
+              id="adminKey"
+              name="adminKey"
+              type="password"
+              className="mx-auto h-14 w-full max-w-xl rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-semibold text-white outline-none transition placeholder:text-slate-400 focus:border-white focus:ring-4 focus:ring-violet-400/30"
+              placeholder="Enter admin key"
+              value={values.adminKey}
+              onChange={handleChange}
+            />
           )}
 
           {!isSignup && (
@@ -218,6 +234,10 @@ const AuthPage = ({ mode = "login" }) => {
               Need an account?{" "}
               <Link className="font-bold text-white underline decoration-white/40 underline-offset-4" to="/signup">
                 Sign up
+              </Link>
+              <span className="mx-2 text-slate-500">|</span>
+              <Link className="font-bold text-white underline decoration-white/40 underline-offset-4" to={isAdminLogin ? "/login" : "/admin-login"}>
+                {isAdminLogin ? "User login" : "Admin login"}
               </Link>
             </p>
           )}

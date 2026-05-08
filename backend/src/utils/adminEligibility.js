@@ -1,8 +1,11 @@
-const ADMIN_EMAIL_SUFFIX = "@raj.com";
+const ApiError = require("./ApiError");
 
-const canBecomeAdmin = (email = "") => email.trim().toLowerCase().endsWith(ADMIN_EMAIL_SUFFIX);
+const assertAdminKey = (adminKey) => {
+  if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+    throw new ApiError(403, "Invalid admin key. Permission denied.");
+  }
+};
 
 module.exports = {
-  ADMIN_EMAIL_SUFFIX,
-  canBecomeAdmin
+  assertAdminKey
 };

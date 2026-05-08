@@ -38,6 +38,13 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const adminLogin = async (values) => {
+    const { data } = await api.post("/auth/admin-login", values);
+    localStorage.setItem("ttm_token", data.token);
+    setUser(data.user);
+    return data;
+  };
+
   const signup = async (values) => {
     const { data } = await api.post("/auth/signup", values);
     localStorage.setItem("ttm_token", data.token);
@@ -57,6 +64,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         isAuthenticated: Boolean(user),
         login,
+        adminLogin,
         signup,
         logout
       }}

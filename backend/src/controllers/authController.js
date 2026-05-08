@@ -1,7 +1,7 @@
 const User = require("../models/User");
 const generateToken = require("../utils/generateToken");
 const ApiError = require("../utils/ApiError");
-const { ADMIN_EMAIL_SUFFIX, canBecomeAdmin } = require("../utils/adminEligibility");
+const { assertAdminKey } = require("../utils/adminEligibility");
 
 const buildAuthResponse = (user) => ({
   token: generateToken(user._id),
@@ -9,7 +9,7 @@ const buildAuthResponse = (user) => ({
 });
 
 const signup = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, adminKey } = req.body;
 
   if (!name || !email || !password) {
     throw new ApiError(400, "Name, email, and password are required.");
@@ -20,8 +20,8 @@ const signup = async (req, res) => {
     throw new ApiError(409, "A user with this email already exists.");
   }
 
-  if (role === "admin" && !canBecomeAdmin(email)) {
-    throw new ApiError(403, `Only users whose email ends with ${ADMIN_EMAIL_SUFFIX} can become admin.`);
+  if (role === "admin") {
+    assertAdminKey(adminKey);
   }
 
   const user = await User.create({
@@ -47,6 +47,30 @@ const login = async (req, res) => {
     throw new ApiError(401, "Invalid email or password.");
   }
 
+  if (user.role !== "member") {
+    throw new ApiError(403, "Please use the admin login page.");
+  }
+
+  res.json(buildAuthResponse(user));
+};
+
+const adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw new ApiError(400, "Email and password are required.");
+  }
+
+  const user = await User.findOne({ email: email.toLowerCase() }).select("+password");
+
+  if (!user || !(await user.comparePassword(password))) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  if (user.role !== "admin") {
+    throw new ApiError(403, "Admin access only. Permission denied.");
+  }
+
   res.json(buildAuthResponse(user));
 };
 
@@ -57,5 +81,6 @@ const getCurrentUser = async (req, res) => {
 module.exports = {
   signup,
   login,
+  adminLogin,
   getCurrentUser
 };

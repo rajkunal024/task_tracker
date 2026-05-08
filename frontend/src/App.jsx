@@ -14,6 +14,7 @@ const App = () => {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
+      <Route path="/admin-login" element={<AuthPage mode="admin-login" />} />
       <Route path="/signup" element={<AuthPage mode="signup" />} />
 
       <Route element={<ProtectedRoute />}>
